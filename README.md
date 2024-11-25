@@ -111,10 +111,15 @@ Below is a list of the dependencies used in this project:
 
 ## **Additional Configuration**
 
+
 ### **TailwindCSS**
 The project uses **NativeWind**, a Tailwind CSS-like library for React Native. Configurations are located in:
+- `https://www.youtube.com/watch?v=9SdmwQPblBI` <--- Link
 - `tailwind.config.js`
 - `nativewind-env.d.ts`
+
+
+
 
 ### **Image Picker**
 The project includes image picker functionality using **expo-image-picker**.
