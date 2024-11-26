@@ -10,53 +10,22 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { API_URL } from '../../config';
+import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Define navigation types
-type RootStackParamList = {
-  Login: undefined;
-  Home: { deliveryman_id: string };
-};
-
-// Define the API response type
-type LoginResponse = {
-  success: boolean;
-  user: { id: number; name: string };
-  token: string;
-  message?: string;
-};
-
 const Login: React.FC = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation();
 
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Check if user is already logged in
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
-        const deliverymanId = await AsyncStorage.getItem('deliveryman_id');
-        if (isLoggedIn === 'true' && deliverymanId) {
-          navigation.navigate('Home', { deliveryman_id: deliverymanId });
-        }
-      } catch (error) {
-        console.error('Error checking login status:', error);
-      }
-    };
-
-    checkLoginStatus();
-  }, []);
 
   const togglePasswordVisibility = () => {
     setIsPasswordVisible(!isPasswordVisible);
@@ -71,7 +40,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post<LoginResponse>(`${API_URL}/api/login`, {
+      const response = await axios.post(`${API_URL}/api/login`, {
         username,
         password,
       });

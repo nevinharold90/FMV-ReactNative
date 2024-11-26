@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, FlatList, Alert, Image, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '../../../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationProp } from '@react-navigation/native';
-import { ScrollView } from 'react-native-gesture-handler';
 
 type Delivery = {
   delivery_id: number;
@@ -114,17 +113,16 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
     setModalVisible(false);
     setSelectedDelivery(null);
   };
-  
 
   if (loading) {
-    return <SafeAreaView className="flex-1 flex item-center justify-center">
-            <Text className='text-center'>
-              Loading...
-              </Text>
-          </SafeAreaView>;
+    return (
+      <SafeAreaView className="flex-1 flex item-center justify-center">
+        <Text className='text-center'>
+          Loading...
+        </Text>
+      </SafeAreaView>
+    );
   }
-
-
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -133,7 +131,7 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         <TouchableOpacity className="p-2" onPress={() => navigation.openDrawer()}>
           <Image
             source={require('../../assets/dashboard/menu-svgrepo-com.png')}
-            className="w-6 h-6"
+            className="w-10 h-10"
           />
         </TouchableOpacity>
         <Text className="text-2xl font-bold ml-3">Assigned Delivery</Text>
@@ -191,8 +189,11 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         visible={modalVisible}
         onRequestClose={closeModal}
       >
-        <ScrollView className="flex-1 p-5 bg-white">
-          {selectedDelivery && (
+        <FlatList
+          className="flex-1 p-5 bg-white"
+          data={selectedDelivery ? selectedDelivery.products : []}
+          keyExtractor={(item, index) => index.toString()}
+          ListHeaderComponent={
             <>
               <Text className="text-3xl font-bold mb-5">Order Details</Text>
               <View className="w-full mb-2 flex flex-row items-left items-center">
@@ -200,65 +201,39 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
                   Purchase Order ID #:
                 </Text>
                 <Text className="text-black font-bold text-2xl">
-                  {selectedDelivery.purchase_order_id || 'N/A'}
+                  {selectedDelivery?.purchase_order_id || 'N/A'}
                 </Text>
               </View>
-
               <View className="w-full mb-2 flex flex-row items-left items-center">
                 <Text className="font-bold text-blue-600 text-xl mr-2">
                   Delivery ID #:
                 </Text>
                 <Text className="text-black font-bold text-2xl">
-                  {selectedDelivery.delivery_id || 'N/A'}
+                  {selectedDelivery?.delivery_id || 'N/A'}
                 </Text>
               </View>
-
-              {/* Status */}
               <View className="mb-2 flex flex-row items-center">
                 <Text className="font-bold text-blue-600 text-xl mr-1">
                   Status:
                 </Text>
                 <Text className="text-green-600 font-bold text-2xl rounded-md">
-                  {selectedDelivery.status === 'OD' ? 'On Delivery' : selectedDelivery.status || 'N/A'}
+                  {selectedDelivery?.status === 'OD' ? 'On Delivery' : selectedDelivery?.status || 'N/A'}
                 </Text>
               </View>
-
-              {/* Customer Name */}
-              <View className="w-full mb-2 flex items-left">
-                <Text className="font-bold text-blue-600 text-xl mr-2">
-                  Customer Name:
-                </Text>
-                <Text className="text-black text-xl font-bold">
-                  {selectedDelivery.customer_name || 'N/A'}
-                </Text>
-              </View>
-
-              {/* Products to Deliver */}
-              <Text className="font-bold text-blue-600 text-xl mr-2 mb-3">
-                Products to Deliver:
+            </>
+          }
+          renderItem={({ item }) => (
+            <View className="bg-gray-200 border-b border-gray-300 flex flex-row justify-between items-center px-2 py-2 mb-2 rounded-md shadow-md">
+              <Text className="font-bold text-xl text-gray-900 flex-1 text-left">
+                {item.product_name}
               </Text>
-              <View className="w-full mb-4">
-                {selectedDelivery.products && selectedDelivery.products.length > 0 ? (
-                  <>
-                    {selectedDelivery.products.map((product, index) => (
-                      <View
-                        key={index}
-                        className="bg-gray-200 border-b border-gray-300 flex flex-row justify-between items-center px-4 py-2 mb-2 rounded-md shadow-md"
-                      >
-                        <Text className="font-bold text-xl text-gray-900 flex-1 text-left">
-                          {product.product_name}
-                        </Text>
-                        <Text className="font-bold text-xl text-gray-700 flex-1 text-right">
-                          x{product.quantity}
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                ) : (
-                  <Text className="text-black text-xl">No Products Listed, Contact admin</Text>
-                )}
-              </View>
-
+              <Text className="font-bold text-xl text-gray-700 flex-1 text-right">
+                x{item.quantity}
+              </Text>
+            </View>
+          )}
+          ListFooterComponent={
+            <>
               <TouchableOpacity
                 className="mt-5 p-4 bg-blue-500 rounded-md items-center"
                 onPress={handleReport}
@@ -276,8 +251,8 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
                 </Text>
               </TouchableOpacity>
             </>
-          )}
-        </ScrollView>
+          }
+        />
       </Modal>
     </SafeAreaView>
   );
