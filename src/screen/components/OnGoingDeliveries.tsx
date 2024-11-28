@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList, Alert, Image, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Modal, FlatList, Alert, Image, RefreshControl, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '../../../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationProp } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
 type Delivery = {
   delivery_id: number;
@@ -63,7 +64,6 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
             (item: Delivery) => item.delivery_id
           );
           setDeliveries(validDeliveries);
-          console.log(response.data)
         } else {
           Alert.alert('Error', 'Failed to fetch ongoing deliveries.');
         }
@@ -90,6 +90,12 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
     fetchData();
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchData(); // Re-fetch the deliveries whenever the screen is focused
+    }, [])
+  );
+
   const openViewOrder = (delivery: Delivery) => {
     if (delivery && delivery.delivery_id) {
       setSelectedDelivery(delivery);
@@ -108,21 +114,11 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
       Alert.alert('Error', 'No delivery selected.');
     }
   };
-  
+
   const closeModal = () => {
     setModalVisible(false);
     setSelectedDelivery(null);
   };
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 flex item-center justify-center">
-        <Text className='text-center'>
-          Loading...
-        </Text>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -134,7 +130,9 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
             className="w-10 h-10"
           />
         </TouchableOpacity>
-        <Text className="text-2xl font-bold ml-3">Assigned Delivery</Text>
+        <Text className="text-2xl font-bold ml-3">
+          Assigned Delivery
+        </Text>
       </View>
 
       {/* Deliveries List */}
@@ -179,7 +177,14 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
           refreshing={refreshing}
         />
       ) : (
-        <Text className="text-center text-black">No ongoing deliveries found.</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          <Text className="text-center text-black">No ongoing deliveries found.</Text>
+        </ScrollView>
       )}
 
       {/* Modal for Details */}

@@ -47,16 +47,23 @@ const Report = () => {
     };
 
     const handleSubmit = async () => {
+        // Check if at least one photo is taken
+        if (photos.length === 0) {
+            Alert.alert('Error', 'Please take at least one photo to proceed.');
+            return;
+        }
+    
         const formData = new FormData();
-
+    
         // Append notes and status
         formData.append('notes', comment.trim() === '' ? 'no comment' : comment.trim());
         formData.append('status', 'P'); // Always set to "P"
-
+    
         // Append damages using delivery_products
         if (delivery && delivery.products && Array.isArray(delivery.products)) {
             delivery.products.forEach(product => {
                 const noOfDamages = damageCounts[product.product_id] || '0';
+                formData.append(`damages[${product.product_id}][product_id]`, product.product_id);
                 formData.append(`damages[${product.product_id}][no_of_damages]`, noOfDamages);
             });
         } else {
@@ -64,7 +71,7 @@ const Report = () => {
             Alert.alert('Error', 'There is a problem with the delivery data structure.');
             return;
         }
-
+    
         // Append images as an array
         photos.forEach((photo, index) => {
             const fileName = photo.split('/').pop();
@@ -74,12 +81,12 @@ const Report = () => {
                 type: 'image/jpeg',
             });
         });
-
+    
         // Log formData for debugging
         for (let pair of formData.entries()) {
             console.log(`${pair[0]}:`, pair[1]);
         }
-
+    
         try {
             const response = await axios.post(`${API_URL}/api/update-delivery/${delivery.delivery_id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -92,6 +99,7 @@ const Report = () => {
             Alert.alert('Error', 'An error occurred while submitting the report.');
         }
     };
+    
 
     return (
         <SafeAreaView className="flex-1 bg-white p-5">

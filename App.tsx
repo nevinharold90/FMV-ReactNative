@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import Login from './src/screen/Login';
 import Home from './src/screen/Home';
@@ -15,14 +16,35 @@ import { Poppins_400Regular, Poppins_700Bold } from '@expo-google-fonts/poppins'
 const Stack = createStackNavigator();
 
 export default function App() {
-  // State to manage the initial route of the app
-  const [initialRoute, setInitialRoute] = useState<string>('Login'); // Set Login as the initial route
-  
+  const [initialRoute, setInitialRoute] = useState<string | null>(null); // Initial route is now null to determine dynamically
+
   // Load fonts
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_700Bold,
   });
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+        const deliverymanId = await AsyncStorage.getItem('deliveryman_id');
+
+        if (isLoggedIn === 'true' && deliverymanId) {
+          // If user is already logged in, set initial route to Home
+          setInitialRoute('Home');
+        } else {
+          // Otherwise, set initial route to Login
+          setInitialRoute('Login');
+        }
+      } catch (error) {
+        console.error('Error checking login status:', error);
+        setInitialRoute('Login');
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
 
   // Display a loading spinner until fonts and initial route are loaded
   if (!fontsLoaded || initialRoute === null) {

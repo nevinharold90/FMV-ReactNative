@@ -69,7 +69,7 @@ const DashboardScreen = ({ navigation }: any) => {
         {/* Dashboard Title */}
         <View className='flex flex-row justify-left'>
           <Text className="text-2xl font-bold w-1/2">
-            Dashboard
+            Home
           </Text>
           <View className='flex flex-row justify-end bg-red-500  '>
             <TouchableOpacity 
@@ -85,6 +85,11 @@ const DashboardScreen = ({ navigation }: any) => {
       </View>
 
       <ScrollView className='flex-1 '>
+        <View className='w-full flex justify-center items-center '>
+          <Text className='text-center text-2xl font-bold mb-5'>
+            Welcome, {deliverymanName}
+          </Text>
+        </View>
         <View className='w-full p-2 flex flex-row justify-evenly'>
           <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
             <Text className='text-white'>
