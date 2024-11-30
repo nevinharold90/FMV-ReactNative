@@ -17,6 +17,7 @@ const Report = () => {
     const [photos, setPhotos] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [isCameraOpen, setIsCameraOpen] = useState(false); // Track camera usage to prevent navigation issues
 
     const handleDamageChange = (productId, newValue) => {
         setDamageCounts(prevState => ({
@@ -26,18 +27,27 @@ const Report = () => {
     };
 
     const handleTakePhoto = async () => {
-        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permissionResult.granted) {
-            Alert.alert('Camera access denied');
-            return;
-        }
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: false,
-            quality: 1,
-        });
-        if (!result.canceled && result.assets?.length) {
-            setPhotos(oldPhotos => [...oldPhotos, result.assets[0].uri]);
+        try {
+            setIsCameraOpen(true); // Set camera open state
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permissionResult.granted) {
+                Alert.alert('Camera access denied');
+                setIsCameraOpen(false); // Reset state
+                return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: false,
+                quality: 1,
+            });
+            if (!result.canceled && result.assets?.length) {
+                setPhotos(oldPhotos => [...oldPhotos, result.assets[0].uri]);
+            }
+        } catch (error) {
+            console.error('Error while taking photo:', error);
+            Alert.alert('Error', 'Unable to take photo. Please try again.');
+        } finally {
+            setIsCameraOpen(false); // Reset state after camera is closed
         }
     };
 
@@ -55,16 +65,20 @@ const Report = () => {
     
         const formData = new FormData();
     
-        // Append notes and status
+        // Append notes
         formData.append('notes', comment.trim() === '' ? 'no comment' : comment.trim());
-        formData.append('status', 'P'); // Always set to "P"
     
-        // Append damages using delivery_products
+        // Append damages using the correct array format
         if (delivery && delivery.products && Array.isArray(delivery.products)) {
-            delivery.products.forEach(product => {
+            delivery.products.forEach((product, index) => {
                 const noOfDamages = damageCounts[product.product_id] || '0';
-                formData.append(`damages[${product.product_id}][product_id]`, product.product_id);
-                formData.append(`damages[${product.product_id}][no_of_damages]`, noOfDamages);
+    
+                // Check that product_id is being sent correctly
+                console.log(`Adding product to formData: product_id=${product.product_id}, no_of_damages=${noOfDamages}`);
+    
+                // Append product_id and no_of_damages to formData
+                formData.append(`damages[${index}][product_id]`, product.product_id);
+                formData.append(`damages[${index}][no_of_damages]`, noOfDamages);
             });
         } else {
             console.error("Products array in delivery is undefined or not an array");
@@ -72,7 +86,7 @@ const Report = () => {
             return;
         }
     
-        // Append images as an array
+        // Append images
         photos.forEach((photo, index) => {
             const fileName = photo.split('/').pop();
             formData.append('images[]', {
@@ -81,11 +95,6 @@ const Report = () => {
                 type: 'image/jpeg',
             });
         });
-    
-        // Log formData for debugging
-        for (let pair of formData.entries()) {
-            console.log(`${pair[0]}:`, pair[1]);
-        }
     
         try {
             const response = await axios.post(`${API_URL}/api/update-delivery/${delivery.delivery_id}`, formData, {
@@ -99,6 +108,8 @@ const Report = () => {
             Alert.alert('Error', 'An error occurred while submitting the report.');
         }
     };
+    
+    
     
 
     return (
@@ -116,17 +127,20 @@ const Report = () => {
                         <Text className="font-bold text-blue-600 text-xl mb-3">Products Delivered:</Text>
                         {delivery.products.map((product, index) => (
                             <View key={index} className="flex flex-row justify-between py-2 mb-2 rounded-md bg-pink-200 px-2">
-                                <View>
-                                    <Text className="font-bold text-xl text-gray-900">{product.product_name}</Text>
-                                    <Text className="font-bold text-xl text-gray-700">x{product.quantity}</Text>
+                                <View className='flex flex-row w-2/3 justify-around items-center'>
+                                    <Text className="font-bold text-xl w-1/3 text-gray-700">x{product.quantity}</Text>
+                                    <Text className="font-bold text-md w-2/3 text-gray-900">{product.product_name}</Text>
                                 </View>
-                                <TextInput
-                                    value={damageCounts[product.product_id] || ''}
-                                    onChangeText={newValue => handleDamageChange(product.product_id, newValue)}
-                                    placeholder="Damage number"
-                                    keyboardType="numeric"
-                                    className="border border-b-2 border-pink-600 rounded-md p-2 ml-4"
-                                />
+                                <View className='flex flex-row w-1/3 justify-end items-center p-1'>
+                                    <Text className="font-bold text-xl text-gray-700 text-right ">x</Text>
+                                    <TextInput
+                                        value={damageCounts[product.id] || ''}
+                                        onChangeText={newValue => handleDamageChange(product.id, newValue)}
+                                        placeholder="damage"
+                                        keyboardType="numeric"
+                                        className="border ml-2 border-b-2 w-2/3 border-pink-600 rounded-md text-center"
+                                    />
+                                </View>
                             </View>
                         ))}
                         <TextInput

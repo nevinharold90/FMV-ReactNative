@@ -6,6 +6,8 @@ import { API_URL } from '../../../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationProp } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
+import OrderDetails from './OnGoingModal/OrderDetails'; 
+import RefundDetails from './OnGoingModal/RefundDetails';  
 
 type Delivery = {
   delivery_id: number;
@@ -19,11 +21,13 @@ type Delivery = {
   };
   status?: string;
   customer_name?: string;
+  has_damages?: boolean;
   products?: {
     id: number;
     product_name: string;
     quantity: number;
     price: number;
+    no_of_damages?: number;
   }[];
 };
 
@@ -39,6 +43,7 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [viewType, setViewType] = useState<'OrderDetails' | 'RefundDetails'>('OrderDetails'); // Added viewType
 
   // Fetch deliveries function
   const fetchData = async () => {
@@ -99,19 +104,17 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
   const openViewOrder = (delivery: Delivery) => {
     if (delivery && delivery.delivery_id) {
       setSelectedDelivery(delivery);
+
+      // Determine the view type based on has_damages
+      if (delivery.has_damages) {
+        setViewType('RefundDetails');
+      } else {
+        setViewType('OrderDetails');
+      }
+
       setModalVisible(true);
     } else {
       Alert.alert('Error', 'Invalid delivery data.');
-    }
-  };
-
-  const handleReport = () => {
-    if (selectedDelivery) {
-      setModalVisible(false);
-      setSelectedDelivery(null);
-      navigation.navigate('Report', { delivery: selectedDelivery });
-    } else {
-      Alert.alert('Error', 'No delivery selected.');
     }
   };
 
@@ -144,14 +147,14 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
             item.delivery_id ? item.delivery_id.toString() : `${Math.random()}`
           }
           renderItem={({ item }) => (
-            <View className="mb-4 p-5 bg-white rounded-lg shadow-md border border-blue-500">
+            <View className={`mb-4 p-5 bg-white rounded-lg shadow-md border ${item.has_damages ? 'border-red-500' : 'border-blue-500'} `}>
               <View className="mb-2 w-full flex flex-row items-center px-1">
-                <Text className="font-bold text-blue-600 text-xl">POID No:</Text>
+                <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>POID No:</Text>
                 <Text className="text-black font-bold text-2xl">#{item.purchase_order_id || 'N/A'}</Text>
               </View>
 
               <View className="mb-2 w-full px-1">
-                <Text className="font-bold text-blue-600 text-xl">Address:</Text>
+                <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Address:</Text>
                 <Text className="text-black font-bold text-xl">
                   {item.address
                     ? `${item.address.street || 'N/A'}, ${item.address.barangay || 'N/A'}, ${item.address.city || 'N/A'}, ${item.address.province || 'N/A'}, ${item.address.zip_code || 'N/A'}`
@@ -160,16 +163,18 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
               </View>
 
               <View className="mb-2 w-full px-1">
-                <Text className="font-bold text-blue-600 text-xl">Customer Name:</Text>
+                <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Customer Name:</Text>
                 <Text className="text-black font-bold text-xl">{item.customer_name || 'N/A'}</Text>
               </View>
 
               {/* View Button */}
               <TouchableOpacity
-                className="mt-4 p-3 bg-blue-600 rounded-md items-center"
+                className={`mt-4 p-3 rounded-md items-center ${item.has_damages ? 'bg-red-500' : 'bg-blue-600'}`}
                 onPress={() => openViewOrder(item)}
               >
-                <Text className="text-white font-bold text-xl">View</Text>
+                <Text className="text-white font-bold text-xl">
+                  {item.has_damages ? 'View Refund Delivery' : 'View Delivery'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -194,70 +199,11 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         visible={modalVisible}
         onRequestClose={closeModal}
       >
-        <FlatList
-          className="flex-1 p-5 bg-white"
-          data={selectedDelivery ? selectedDelivery.products : []}
-          keyExtractor={(item, index) => index.toString()}
-          ListHeaderComponent={
-            <>
-              <Text className="text-3xl font-bold mb-5">Order Details</Text>
-              <View className="w-full mb-2 flex flex-row items-left items-center">
-                <Text className="font-bold text-blue-600 text-xl mr-2">
-                  Purchase Order ID #:
-                </Text>
-                <Text className="text-black font-bold text-2xl">
-                  {selectedDelivery?.purchase_order_id || 'N/A'}
-                </Text>
-              </View>
-              <View className="w-full mb-2 flex flex-row items-left items-center">
-                <Text className="font-bold text-blue-600 text-xl mr-2">
-                  Delivery ID #:
-                </Text>
-                <Text className="text-black font-bold text-2xl">
-                  {selectedDelivery?.delivery_id || 'N/A'}
-                </Text>
-              </View>
-              <View className="mb-2 flex flex-row items-center">
-                <Text className="font-bold text-blue-600 text-xl mr-1">
-                  Status:
-                </Text>
-                <Text className="text-green-600 font-bold text-2xl rounded-md">
-                  {selectedDelivery?.status === 'OD' ? 'On Delivery' : selectedDelivery?.status || 'N/A'}
-                </Text>
-              </View>
-            </>
-          }
-          renderItem={({ item }) => (
-            <View className="bg-gray-200 border-b border-gray-300 flex flex-row justify-between items-center px-2 py-2 mb-2 rounded-md shadow-md">
-              <Text className="font-bold text-xl text-gray-900 flex-1 text-left">
-                {item.product_name}
-              </Text>
-              <Text className="font-bold text-xl text-gray-700 flex-1 text-right">
-                x{item.quantity}
-              </Text>
-            </View>
-          )}
-          ListFooterComponent={
-            <>
-              <TouchableOpacity
-                className="mt-5 p-4 bg-blue-500 rounded-md items-center"
-                onPress={handleReport}
-              >
-                <Text className='text-white font-bold text-xl'>
-                  Report
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="mt-5 p-4 bg-red-600 rounded-md items-center"
-                onPress={closeModal}
-              >
-                <Text className='text-white font-bold text-xl'>
-                  Close
-                </Text>
-              </TouchableOpacity>
-            </>
-          }
-        />
+        {selectedDelivery && viewType === 'OrderDetails' ? (
+          <OrderDetails delivery={selectedDelivery} onClose={closeModal} />
+        ) : (
+          selectedDelivery && <RefundDetails delivery={selectedDelivery} onClose={closeModal} />
+        )}
       </Modal>
     </SafeAreaView>
   );
