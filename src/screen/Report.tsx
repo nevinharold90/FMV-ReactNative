@@ -10,14 +10,14 @@ import { useNavigation } from '@react-navigation/native';
 const Report = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const delivery = route.params.delivery;
+    const delivery = route.params?.delivery;  // Make sure delivery is passed as a parameter
+    const [isNavigating, setIsNavigating] = useState(false);
 
     const [damageCounts, setDamageCounts] = useState({});
     const [comment, setComment] = useState('');
     const [photos, setPhotos] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
-    const [isCameraOpen, setIsCameraOpen] = useState(false); // Track camera usage to prevent navigation issues
 
     const handleDamageChange = (productId, newValue) => {
         setDamageCounts(prevState => ({
@@ -28,11 +28,13 @@ const Report = () => {
 
     const handleTakePhoto = async () => {
         try {
-            setIsCameraOpen(true); // Set camera open state
+            if (isNavigating) return;
+
+            setIsNavigating(true);
             const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
             if (!permissionResult.granted) {
                 Alert.alert('Camera access denied');
-                setIsCameraOpen(false); // Reset state
+                setIsNavigating(false);
                 return;
             }
             const result = await ImagePicker.launchCameraAsync({
@@ -47,7 +49,8 @@ const Report = () => {
             console.error('Error while taking photo:', error);
             Alert.alert('Error', 'Unable to take photo. Please try again.');
         } finally {
-            setIsCameraOpen(false); // Reset state after camera is closed
+            // Ensure navigation stays on `report.tsx` after taking a photo
+            setIsNavigating(false);
         }
     };
 
@@ -62,20 +65,17 @@ const Report = () => {
             Alert.alert('Error', 'Please take at least one photo to proceed.');
             return;
         }
-    
+
         const formData = new FormData();
-    
+
         // Append notes
         formData.append('notes', comment.trim() === '' ? 'no comment' : comment.trim());
-    
+
         // Append damages using the correct array format
         if (delivery && delivery.products && Array.isArray(delivery.products)) {
             delivery.products.forEach((product, index) => {
                 const noOfDamages = damageCounts[product.product_id] || '0';
-    
-                // Check that product_id is being sent correctly
-                console.log(`Adding product to formData: product_id=${product.product_id}, no_of_damages=${noOfDamages}`);
-    
+
                 // Append product_id and no_of_damages to formData
                 formData.append(`damages[${index}][product_id]`, product.product_id);
                 formData.append(`damages[${index}][no_of_damages]`, noOfDamages);
@@ -85,7 +85,7 @@ const Report = () => {
             Alert.alert('Error', 'There is a problem with the delivery data structure.');
             return;
         }
-    
+
         // Append images
         photos.forEach((photo, index) => {
             const fileName = photo.split('/').pop();
@@ -95,7 +95,7 @@ const Report = () => {
                 type: 'image/jpeg',
             });
         });
-    
+
         try {
             const response = await axios.post(`${API_URL}/api/update-delivery/${delivery.delivery_id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -104,13 +104,10 @@ const Report = () => {
                 { text: 'OK', onPress: () => navigation.navigate('OnGoingDeliveries') },
             ]);
         } catch (error) {
-            console.error(error.response?.data || error.message);
+            console.error('Error submitting delivery report:', error.response?.data || error.message);
             Alert.alert('Error', 'An error occurred while submitting the report.');
         }
     };
-    
-    
-    
 
     return (
         <SafeAreaView className="flex-1 bg-white p-5">
@@ -134,8 +131,8 @@ const Report = () => {
                                 <View className='flex flex-row w-1/3 justify-end items-center p-1'>
                                     <Text className="font-bold text-xl text-gray-700 text-right ">x</Text>
                                     <TextInput
-                                        value={damageCounts[product.id] || ''}
-                                        onChangeText={newValue => handleDamageChange(product.id, newValue)}
+                                        value={damageCounts[product.product_id] || ''}
+                                        onChangeText={newValue => handleDamageChange(product.product_id, newValue)}
                                         placeholder="damage"
                                         keyboardType="numeric"
                                         className="border ml-2 border-b-2 w-2/3 border-pink-600 rounded-md text-center"
@@ -143,12 +140,18 @@ const Report = () => {
                                 </View>
                             </View>
                         ))}
-                        <TextInput
-                            value={comment}
-                            onChangeText={setComment}
-                            placeholder="Comments regarding the delivery"
-                            className="border rounded mb-4 p-2 text-blue-600 text-xl"
-                        />
+                        <View >
+                            <Text>
+                                Comment
+                            </Text>                        
+                            <TextInput
+                                value={comment}
+                                onChangeText={setComment}
+                                placeholder="Comments regarding the delivery"
+                                className="border rounded mb-4 p-2 text-blue-600 text-xl"
+                            />
+                        </View>
+
                         <TouchableOpacity className="bg-blue-500 p-3 rounded-md items-center mb-4" onPress={handleTakePhoto}>
                             <Text className="text-white font-bold">Take Photo</Text>
                         </TouchableOpacity>

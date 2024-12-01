@@ -25,8 +25,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
   const navigation = useNavigation(); // Use the useNavigation hook to get the navigation object
 
   const handleReport = () => {
-    navigation.navigate('Report', { delivery });
+    navigation.replace('Report', { delivery });
   };
+
 
   return (
     <FlatList

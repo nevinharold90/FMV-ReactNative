@@ -45,25 +45,40 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const [viewType, setViewType] = useState<'OrderDetails' | 'RefundDetails'>('OrderDetails'); // Added viewType
 
+
+  const handleNetworkError = (error) => {
+    if (error.message === 'Network Error') {
+      Alert.alert(
+        'Network Error',
+        'It seems there is a problem with your internet connection. Please check and try again.'
+      );
+    } else {
+      console.error('Unexpected error:', error);
+      Alert.alert('Error', 'Unexpected error occurred.');
+    }
+  };
+
+  
   // Fetch deliveries function
   const fetchData = async () => {
     try {
       const storedId = await AsyncStorage.getItem('deliveryman_id');
       const storedToken = await AsyncStorage.getItem('deliveryman_token');
-
+  
       if (storedId && storedToken) {
         setID(parseInt(storedId, 10));
         setToken(storedToken);
-
+  
         const response = await axios.get(
           `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`,
           {
             headers: {
               Authorization: `Bearer ${storedToken}`,
             },
+            timeout: 5000, // 5 seconds timeout
           }
         );
-
+  
         if (response.status === 200) {
           const validDeliveries = response.data.filter(
             (item: Delivery) => item.delivery_id
@@ -74,20 +89,38 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         }
       }
     } catch (error) {
-      console.error('Error fetching ongoing deliveries:', error);
-      Alert.alert(
-        'Error',
-        'Unable to fetch ongoing deliveries. Please try again later.'
-      );
+      console.error('Error fetching ongoing deliveries:', error.message);
+      console.error('Error details:', error.response?.data || error);
+      Alert.alert('Error', 'Unable to fetch ongoing deliveries. Please try again later.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+  
+  
 
   useEffect(() => {
-    fetchData();
+    const initializeData = async () => {
+      setLoading(true);
+      const storedId = await AsyncStorage.getItem('deliveryman_id');
+      const storedToken = await AsyncStorage.getItem('deliveryman_token');
+  
+      if (storedId && storedToken) {
+        setID(parseInt(storedId, 10));
+        setToken(storedToken);
+        fetchData(); // Call fetchData after both id and token are set
+      } else {
+        Alert.alert('Error', 'Failed to retrieve stored credentials.');
+      }
+      setLoading(false);
+    };
+  
+    initializeData();
   }, []);
+
+  
+  
 
   // Refresh function
   const handleRefresh = () => {
