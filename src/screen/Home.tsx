@@ -1,25 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  View,
-  Text,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createStackNavigator } from '@react-navigation/stack';
+import { Image, View, Text, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import OnGoingDeliveries from './components/OnGoingDeliveries';
-import PastDeliveries from './components/PastDeliveries';
 import { API_URL } from '../../config';
 import axios from 'axios';
-import { ScrollView } from 'react-native-gesture-handler';
+
+import Report from './Report';
+import OnGoingDeliveries from './components/OnGoingDeliveries';
+import PastDeliveries from './components/PastDeliveries';
 
 const Drawer = createDrawerNavigator();
 
-const DashboardScreen = ({ navigation }: any) => {
+// Main Home screen component
+const HomeScreen = ({ navigation }: any) => {
   const [deliverymanName, setDeliverymanName] = useState<string>('');
-
+  
   useEffect(() => {
     const fetchUserData = async () => {
       const name = await AsyncStorage.getItem('deliveryman_name');
@@ -28,6 +26,33 @@ const DashboardScreen = ({ navigation }: any) => {
     fetchUserData();
   }, []);
 
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="flex flex-row items-center justify-between px-4 py-2 border-b-[0.5px]">
+        <View className="flex flex-row items-center">
+          <TouchableOpacity
+            className="p-2"
+            onPress={() => navigation.openDrawer()} // Opens the drawer navigation
+          >
+            <Image
+              source={require('../assets/dashboard/menu-svgrepo-com.png')}
+              className="w-10 h-10"
+            />
+          </TouchableOpacity>
+          <Text className="text-2xl font-bold ml-2 text-blue-500">
+            Home
+          </Text>
+        </View>
+        <Text className="text-2xl font-bold px-4 text-blue-500">
+          {deliverymanName}
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+// Custom Drawer Content
+const CustomDrawerContent = ({ navigation, deliverymanName }: any) => {
   const logout = async () => {
     try {
       const token = await AsyncStorage.getItem('deliveryman_token');
@@ -35,14 +60,12 @@ const DashboardScreen = ({ navigation }: any) => {
         `${API_URL}/api/logout`,
         {},
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       if (response.data.success) {
-        await AsyncStorage.clear(); // Clear all stored data
+        await AsyncStorage.clear();
         navigation.navigate('Login');
       } else {
         console.error('Logout failed');
@@ -53,101 +76,82 @@ const DashboardScreen = ({ navigation }: any) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row justify-left items-center px-2 h-[5%]">
-        {/* Hamburger Menu Button */}
-        <TouchableOpacity 
-          className="p-2"
-          onPress={() => navigation.openDrawer()} // Opens the drawer navigation
-        >
-          <Image
-            source={require('../assets/dashboard/menu-svgrepo-com.png')} // Replace with your hamburger icon path
-            className="w-10 h-10"
-          />
-        </TouchableOpacity>
-  
-        {/* Dashboard Title */}
-        <View className='flex flex-row justify-left'>
-          <Text className="text-2xl font-bold w-1/2">
-            Home
-          </Text>
-          <View className='flex flex-row justify-end bg-red-500  '>
-            <TouchableOpacity 
-              className='justify-center w-1/2'
-              onPress={logout}
-            >
-              <Text className='align-middle'>
-                Logout
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <DrawerContentScrollView>
+      <View className="flex-1 space-y-4 px-4 py-2">
+        <DrawerItem
+          label="Home"
+          labelStyle={{ color: '#ffffff', fontSize: 20 }}
+          onPress={() => navigation.navigate('Home')}
+        />
+        <DrawerItem
+          label="My Deliveries"
+          labelStyle={{ color: '#ffffff', fontSize: 20 }}
+          onPress={() => navigation.navigate('My Deliveries')}
+        />
+        <DrawerItem
+          label="Past Deliveries"
+          labelStyle={{ color: '#ffffff', fontSize: 20 }}
+          onPress={() => navigation.navigate('Past Deliveries')}
+        />
+        <DrawerItem
+          label="" // Invisible item, no space or interaction
+          style={{ height: 0 }}
+          onPress={() => {}}
+          enabled={false}
+        />
+        <DrawerItem
+          label="Logout"
+          labelStyle={{ color: '#ffffff', fontSize: 20 }}
+          onPress={() => {
+            Alert.alert(
+              'Confirm Logout',
+              'Are you sure you want to logout?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Yes', onPress: logout },
+              ]
+            );
+          }}
+        />
       </View>
-
-      <ScrollView className='flex-1 '>
-        <View className='w-full flex justify-center items-center '>
-          <Text className='text-center text-2xl font-bold mb-5'>
-            Welcome, {deliverymanName}
-          </Text>
-        </View>
-        <View className='w-full p-2 flex flex-row justify-evenly'>
-          <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View className='w-full p-2 flex flex-row justify-evenly'>
-        <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View className='w-full p-2 flex flex-row justify-evenly'>
-          <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className=' bg-blue-500 w-[45%] h-full rounded-2xl p-2'>
-            <Text className='text-white'>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui consectetur odit nobis corporis saepe maiores fugit quia pariatur in molestias? Alias, delectus quam sequi architecto minima ex rem unde modi.
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    </DrawerContentScrollView>
   );
-  
 };
 
-const Dashboard = () => {
+// DrawerNavigator with Stack and Drawer integration
+const DrawerNavigator = () => {
+  const [deliverymanName, setDeliverymanName] = useState<string>('');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const name = await AsyncStorage.getItem('deliveryman_name');
+      if (name) setDeliverymanName(name);
+    };
+    fetchUserData();
+  }, []);
+
   return (
     <Drawer.Navigator
       screenOptions={{
-        headerShown: false, // Hides the header
+        headerShown: false,
         drawerStyle: {
+          backgroundColor: '#2954ba',
           width: Dimensions.get('window').width * 0.8,
         },
+        drawerActiveTintColor: '#ffffff',
+        drawerInactiveTintColor: '#d1d1d1',
       }}
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
     >
-      {/* Changed name to be more descriptive */}
-      <Drawer.Screen name="Dashboard Home" component={DashboardScreen} />
-      <Drawer.Screen name="On-Going Deliveries" component={OnGoingDeliveries} />
+      {/* Main Drawer Screens */}
+      <Drawer.Screen name="Home" component={HomeScreen} />
+      <Drawer.Screen name="My Deliveries" component={OnGoingDeliveries} />
       <Drawer.Screen name="Past Deliveries" component={PastDeliveries} />
+      
+      {/* If Report is a separate screen, you can directly add it to the Drawer or elsewhere */}
+      <Drawer.Screen name="Report" component={Report} />
     </Drawer.Navigator>
   );
 };
 
-export default Dashboard;
+export default DrawerNavigator;

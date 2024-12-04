@@ -32,7 +32,7 @@ export default function App() {
 
         if (isLoggedIn === 'true' && deliverymanId) {
           // If user is already logged in, set initial route to Home
-          setInitialRoute('Home');
+          setInitialRoute('HomeScreen');
         } else {
           // Otherwise, set initial route to Login
           setInitialRoute('Login');
@@ -59,9 +59,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="OnGoingDeliveries" component={OnGoingDeliveries} />
-        <Stack.Screen name="Report" component={Report} />
+        <Stack.Screen name="HomeScreen" component={Home} />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>

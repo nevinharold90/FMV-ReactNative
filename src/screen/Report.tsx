@@ -15,7 +15,7 @@ const Report = () => {
 
     const [damageCounts, setDamageCounts] = useState({});
     const [comment, setComment] = useState('');
-    const [photos, setPhotos] = useState([]);
+    const [photos, setPhotos] = useState([]);  // Photos are now required
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
 
@@ -26,37 +26,39 @@ const Report = () => {
         }));
     };
 
+    // Remove setModalVisible(true) from here in handleTakePhoto
     const handleTakePhoto = async () => {
         try {
-            if (isNavigating) return;
-
+            if (isNavigating) return;  // Prevent multiple presses
             setIsNavigating(true);
+            
             const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
             if (!permissionResult.granted) {
                 Alert.alert('Camera access denied');
-                setIsNavigating(false);
                 return;
             }
+    
             const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: false,
                 quality: 1,
             });
+    
             if (!result.canceled && result.assets?.length) {
-                setPhotos(oldPhotos => [...oldPhotos, result.assets[0].uri]);
+                setPhotos(prevPhotos => [...prevPhotos, result.assets[0].uri]);
             }
         } catch (error) {
             console.error('Error while taking photo:', error);
             Alert.alert('Error', 'Unable to take photo. Please try again.');
         } finally {
-            // Ensure navigation stays on `report.tsx` after taking a photo
             setIsNavigating(false);
         }
     };
+    
 
     const handleImagePress = uri => {
         setSelectedImage(uri);
-        setModalVisible(true);
+        setModalVisible(true);  // Only triggered when an image is tapped
     };
 
     const handleSubmit = async () => {
@@ -101,7 +103,16 @@ const Report = () => {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             Alert.alert('Success', 'Delivery report submitted successfully!', [
-                { text: 'OK', onPress: () => navigation.navigate('OnGoingDeliveries') },
+                {
+                    text: 'OK',
+                    onPress: () => {
+                        // Clear all form data
+                        setPhotos([]);
+                        setComment('');
+                        setDamageCounts({});
+                        navigation.navigate('My Deliveries');
+                    },
+                },
             ]);
         } catch (error) {
             console.error('Error submitting delivery report:', error.response?.data || error.message);
@@ -117,60 +128,110 @@ const Report = () => {
                 </View>
                 {delivery ? (
                     <>
-                        <View className="w-full mb-2 flex flex-row items-left items-center">
-                            <Text className="font-bold text-blue-600 text-xl mr-2">Purchase Order ID #:</Text>
-                            <Text className="text-black font-bold text-2xl">{delivery.purchase_order_id || 'N/A'}</Text>
+                        <View className="mb-5">
+                            <Text className="text-lg font-bold">Delivery ID: {delivery.delivery_id}</Text>
+                            <Text className="text-sm">Purchase Order ID: {delivery.purchase_order_id}</Text>
                         </View>
-                        <Text className="font-bold text-blue-600 text-xl mb-3">Products Delivered:</Text>
+
+                        <Text className="text-lg font-bold mb-2">Damage Report:</Text>
                         {delivery.products.map((product, index) => (
-                            <View key={index} className="flex flex-row justify-between py-2 mb-2 rounded-md bg-pink-200 px-2">
-                                <View className='flex flex-row w-2/3 justify-around items-center'>
-                                    <Text className="font-bold text-xl w-1/3 text-gray-700">x{product.quantity}</Text>
-                                    <Text className="font-bold text-md w-2/3 text-gray-900">{product.product_name}</Text>
-                                </View>
-                                <View className='flex flex-row w-1/3 justify-end items-center p-1'>
-                                    <Text className="font-bold text-xl text-gray-700 text-right ">x</Text>
-                                    <TextInput
-                                        value={damageCounts[product.product_id] || ''}
-                                        onChangeText={newValue => handleDamageChange(product.product_id, newValue)}
-                                        placeholder="damage"
-                                        keyboardType="numeric"
-                                        className="border ml-2 border-b-2 w-2/3 border-pink-600 rounded-md text-center"
-                                    />
-                                </View>
+                            <View key={product.product_id} className="mb-4">
+                                <Text className="text-sm">{product.product_name}</Text>
+                                <TextInput
+                                    style={{
+                                        borderColor: '#ccc',
+                                        borderWidth: 1,
+                                        borderRadius: 4,
+                                        padding: 8,
+                                        marginTop: 8,
+                                    }}
+                                    placeholder="Number of damages"
+                                    keyboardType="numeric"
+                                    value={damageCounts[product.product_id]?.toString() || '0'}
+                                    onChangeText={(text) => handleDamageChange(product.product_id, text)}
+                                />
                             </View>
                         ))}
-                        <View >
-                            <Text>
-                                Comment
-                            </Text>                        
+
+                        <View className="mb-5">
+                            <Text className="text-lg font-bold">Comments (Optional):</Text>
                             <TextInput
+                                style={{
+                                    borderColor: '#ccc',
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    padding: 8,
+                                    height: 100,
+                                    textAlignVertical: 'top',
+                                    marginTop: 8,
+                                }}
+                                multiline
+                                numberOfLines={4}
+                                placeholder="Add any comments..."
                                 value={comment}
                                 onChangeText={setComment}
-                                placeholder="Comments regarding the delivery"
-                                className="border rounded mb-4 p-2 text-blue-600 text-xl"
                             />
                         </View>
 
-                        <TouchableOpacity className="bg-blue-500 p-3 rounded-md items-center mb-4" onPress={handleTakePhoto}>
-                            <Text className="text-white font-bold">Take Photo</Text>
-                        </TouchableOpacity>
-                        <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
-                            {photos.map((photoUri, index) => (
-                                <TouchableOpacity key={index} onPress={() => handleImagePress(photoUri)} className="mb-2 mx-2">
-                                    <Image source={{ uri: photoUri }} className="w-[10rem] h-[10rem] rounded-md" resizeMode="cover" />
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                        <View className="mb-5">
+                            <Text className="text-lg font-bold">Photos (Required):</Text>
+                            {photos.length > 0 ? (
+                                <ScrollView horizontal className="mt-3">
+                                    {photos.map((photoUri, index) => (
+                                        <TouchableOpacity key={index} onPress={() => handleImagePress(photoUri)}>
+                                            <Image
+                                                source={{ uri: photoUri }}
+                                                style={{ width: 100, height: 100, marginRight: 10, borderRadius: 10 }}
+                                            />
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            ) : (
+                                <Text className="text-sm text-gray-500">No photos taken yet.</Text>
+                            )}
+                        </View>
 
-                        <TouchableOpacity className="bg-green-600 p-4 rounded-md items-center" onPress={handleSubmit}>
-                            <Text className="text-white font-bold text-lg">Submit Report</Text>
+                        <TouchableOpacity
+                            onPress={handleTakePhoto}
+                            style={{
+                                backgroundColor: '#4CAF50',
+                                padding: 12,
+                                borderRadius: 8,
+                                marginBottom: 20,
+                            }}
+                        >
+                            <Text className="text-white text-lg text-center">Take Photo</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={handleSubmit}
+                            style={{
+                                backgroundColor: '#007BFF',
+                                padding: 12,
+                                borderRadius: 8,
+                            }}
+                        >
+                            <Text className="text-white text-lg text-center">Submit Report</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
-                    <Text className="text-center text-black">Loading delivery details...</Text>
+                    <Text>Loading delivery details...</Text>
                 )}
             </ScrollView>
+
+            {/* Modal for viewing image */}
+            <Modal visible={modalVisible} onRequestClose={() => setModalVisible(false)} transparent={true}>
+                <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+                    <View className="bg-white p-5 rounded-lg">
+                        {selectedImage && (
+                            <Image source={{ uri: selectedImage }} style={{ width: 300, height: 300 }} />
+                        )}
+                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text className="text-center text-red-500 mt-5">Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };

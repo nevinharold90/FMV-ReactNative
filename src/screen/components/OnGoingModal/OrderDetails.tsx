@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 type Product = {
@@ -18,17 +18,23 @@ type Delivery = {
 
 interface OrderDetailsProps {
   delivery: Delivery;
-  onClose: () => void;
+  onClose: () => void;  // Function to close the modal
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
   const navigation = useNavigation(); // Use the useNavigation hook to get the navigation object
-
+  // console.log(delivery);
+  
   const handleReport = () => {
-    navigation.replace('Report', { delivery });
+    if (delivery && delivery.delivery_id) {
+      onClose();  // Close the modal when navigating to the Report screen
+      navigation.navigate('Report', { delivery });
+    } else {
+      Alert.alert('Error', 'No delivery data available');
+    }
   };
-
-
+  
+  
   return (
     <FlatList
       className="flex-1 p-5 bg-white"
@@ -77,13 +83,13 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
         <>
           <TouchableOpacity
             className="mt-5 p-4 bg-blue-500 rounded-md items-center"
-            onPress={handleReport}
+            onPress={handleReport} // Now it will close the modal
           >
             <Text className="text-white font-bold text-xl">Report</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="mt-5 p-4 bg-red-600 rounded-md items-center"
-            onPress={onClose}
+            onPress={onClose} // Close the modal when 'Close' button is pressed
           >
             <Text className="text-white font-bold text-xl">Close</Text>
           </TouchableOpacity>

@@ -55,7 +55,7 @@ const Login: React.FC = () => {
         await AsyncStorage.setItem('isLoggedIn', 'true'); // Mark user as logged in
 
         // Navigate to Home page
-        navigation.navigate('Home', {
+        navigation.navigate('HomeScreen', {
           deliveryman_id: user.id.toString(),
         });
       } else if (response.status === 401) {

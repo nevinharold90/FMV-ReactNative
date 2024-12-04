@@ -44,6 +44,7 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const [viewType, setViewType] = useState<'OrderDetails' | 'RefundDetails'>('OrderDetails'); // Added viewType
+  const [selectedStatus, setSelectedStatus] = useState<string>('OD'); // Default status 'OD'
 
 
   const handleNetworkError = (error) => {
@@ -69,9 +70,11 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         setID(parseInt(storedId, 10));
         setToken(storedToken);
   
+        // Modify the API request to include the selected status filter
         const response = await axios.get(
-          `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`,
+          `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`, 
           {
+            params: { status: selectedStatus }, // Add the status filter to the query string
             headers: {
               Authorization: `Bearer ${storedToken}`,
             },
@@ -136,24 +139,24 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
 
   const openViewOrder = (delivery: Delivery) => {
     if (delivery && delivery.delivery_id) {
-      setSelectedDelivery(delivery);
-
-      // Determine the view type based on has_damages
+      setSelectedDelivery(delivery);  // Set the selected delivery
+  
+      // Check if the delivery has damages and set the view accordingly
       if (delivery.has_damages) {
         setViewType('RefundDetails');
       } else {
         setViewType('OrderDetails');
       }
-
-      setModalVisible(true);
+  
+      setModalVisible(true);  // Show the modal
     } else {
-      Alert.alert('Error', 'Invalid delivery data.');
+      Alert.alert('Error', 'Invalid delivery data.');  // Show an error if no valid delivery
     }
   };
 
   const closeModal = () => {
-    setModalVisible(false);
-    setSelectedDelivery(null);
+    setModalVisible(false);        // Hide the modal
+    setSelectedDelivery(null);     // Reset the selected delivery data
   };
 
   return (
@@ -162,7 +165,7 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
       <View className="flex-row items-center mb-5">
         <TouchableOpacity className="p-2" onPress={() => navigation.openDrawer()}>
           <Image
-            source={require('../../assets/dashboard/menu-svgrepo-com.png')}
+            source={require('../../assets/dashboard/modal/menu-svgrepo-com.png')}
             className="w-10 h-10"
           />
         </TouchableOpacity>
@@ -225,19 +228,27 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         </ScrollView>
       )}
 
-      {/* Modal for Details */}
       <Modal
         animationType="slide"
         transparent={false}
         visible={modalVisible}
-        onRequestClose={closeModal}
+        onRequestClose={closeModal} // Properly close modal on Android back button
       >
-        {selectedDelivery && viewType === 'OrderDetails' ? (
-          <OrderDetails delivery={selectedDelivery} onClose={closeModal} />
+        {/* Check if selectedDelivery exists before rendering the modal content */}
+        {selectedDelivery ? (
+          viewType === 'OrderDetails' ? (
+            <OrderDetails delivery={selectedDelivery} onClose={closeModal} />
+          ) : (
+            <RefundDetails delivery={selectedDelivery} onClose={closeModal} />
+          )
         ) : (
-          selectedDelivery && <RefundDetails delivery={selectedDelivery} onClose={closeModal} />
+          // Fallback UI if selectedDelivery is not available
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>No delivery data available</Text>
+          </View>
         )}
       </Modal>
+
     </SafeAreaView>
   );
 };
