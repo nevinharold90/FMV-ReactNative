@@ -2,44 +2,27 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-type Product = {
-  id: number;
-  product_name: string;
-  quantity: number;
-  price: number;
-};
+const OrderDetails = ({ delivery, onClose }) => {
+  const navigation = useNavigation();
 
-type Delivery = {
-  purchase_order_id: string;
-  delivery_id: number;
-  status: string;
-  products: Product[];
-};
-
-interface OrderDetailsProps {
-  delivery: Delivery;
-  onClose: () => void;  // Function to close the modal
-}
-
-const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
-  const navigation = useNavigation(); // Use the useNavigation hook to get the navigation object
-  // console.log(delivery);
-  
   const handleReport = () => {
     if (delivery && delivery.delivery_id) {
-      onClose();  // Close the modal when navigating to the Report screen
+      onClose();
       navigation.navigate('Report', { delivery });
     } else {
       Alert.alert('Error', 'No delivery data available');
     }
   };
-  
-  
+
+  if (!delivery.products || !Array.isArray(delivery.products)) {
+    return <Text className="text-red-500">No products found in this delivery.</Text>;
+  }
+
   return (
     <FlatList
-      className="flex-1 p-5 bg-white"
+      className="flex-1 px-5 bg-white"
       data={delivery.products}
-      keyExtractor={(item, index) => index.toString()}
+      keyExtractor={(item, index) => item.id ? item.id.toString() : `fallback-key-${index}`} // Use fallback key
       ListHeaderComponent={
         <>
           <Text className="text-3xl font-bold mb-5">Order Details</Text>
@@ -72,10 +55,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
       renderItem={({ item }) => (
         <View className="bg-gray-200 border-b border-gray-300 flex flex-row justify-between items-center px-2 py-2 mb-2 rounded-md shadow-md">
           <Text className="font-bold text-xl text-gray-900 flex-1 text-left">
-            {item.product_name}
+            {item.product_name || 'Unnamed Product'}
           </Text>
           <Text className="font-bold text-xl text-gray-700 flex-1 text-right">
-            x{item.quantity}
+            x{item.quantity || '0'}
           </Text>
         </View>
       )}
@@ -83,13 +66,13 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ delivery, onClose }) => {
         <>
           <TouchableOpacity
             className="mt-5 p-4 bg-blue-500 rounded-md items-center"
-            onPress={handleReport} // Now it will close the modal
+            onPress={handleReport}
           >
             <Text className="text-white font-bold text-xl">Report</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="mt-5 p-4 bg-red-600 rounded-md items-center"
-            onPress={onClose} // Close the modal when 'Close' button is pressed
+            onPress={onClose}
           >
             <Text className="text-white font-bold text-xl">Close</Text>
           </TouchableOpacity>

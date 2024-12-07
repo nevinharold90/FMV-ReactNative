@@ -70,36 +70,48 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         setID(parseInt(storedId, 10));
         setToken(storedToken);
   
-        // Modify the API request to include the selected status filter
         const response = await axios.get(
-          `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`, 
+          `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`,
           {
-            params: { status: selectedStatus }, // Add the status filter to the query string
+            params: { status: selectedStatus },
             headers: {
               Authorization: `Bearer ${storedToken}`,
             },
-            timeout: 5000, // 5 seconds timeout
+            timeout: 5000,
           }
         );
   
-        if (response.status === 200) {
+        if (response.status === 200 && response.data.length > 0) {
           const validDeliveries = response.data.filter(
             (item: Delivery) => item.delivery_id
           );
           setDeliveries(validDeliveries);
         } else {
-          Alert.alert('Error', 'Failed to fetch ongoing deliveries.');
+          setDeliveries([]);
+          console.log('No ongoing deliveries found for the given status.');
         }
       }
     } catch (error) {
-      console.error('Error fetching ongoing deliveries:', error.message);
-      console.error('Error details:', error.response?.data || error);
-      Alert.alert('Error', 'Unable to fetch ongoing deliveries. Please try again later.');
+      if (error.response?.status === 404) {
+        // Handle 404 (no deliveries found) gracefully
+        setDeliveries([]);
+        console.log('No ongoing deliveries found for the given status.');
+      } else if (error.message === 'Network Error') {
+        Alert.alert(
+          'Network Error',
+          'It seems there is a problem with your internet connection. Please check and try again.'
+        );
+      } else {
+        // Log unexpected errors in a less intrusive way
+        console.warn('Unexpected error occurred while fetching deliveries:', error.message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+  
+  
   
   
 
@@ -184,11 +196,14 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
           }
           renderItem={({ item }) => (
             <View className={`mb-4 p-5 bg-white rounded-lg shadow-md border ${item.has_damages ? 'border-red-500' : 'border-blue-500'} `}>
-              <View className="mb-2 w-full flex flex-row items-center px-1">
+              <View className="mb-2 w-full flex flex-row  px-1">
                 <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>POID No:</Text>
                 <Text className="text-black font-bold text-2xl">#{item.purchase_order_id || 'N/A'}</Text>
               </View>
-
+              <View className="mb-2 w-full flex flex-row  px-1">
+              <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Delivery No:</Text>
+              <Text className="text-black font-bold text-2xl">#{item.delivery_id || 'N/A'}</Text>
+              </View>
               <View className="mb-2 w-full px-1">
                 <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Address:</Text>
                 <Text className="text-black font-bold text-xl">
