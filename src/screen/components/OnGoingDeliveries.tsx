@@ -4,8 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '../../url';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NavigationProp } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import OrderDetails from './OnGoingModal/OrderDetails'; 
 import RefundDetails from './OnGoingModal/RefundDetails';  
 
@@ -23,10 +22,12 @@ type Delivery = {
   customer_name?: string;
   has_damages?: boolean;
   products?: {
-    id: number;
-    product_name: string;
+    id?: number;
+    product_id?: number;
+    product_name?: string;
+    name?: string; // Just in case the API returns 'name' instead of 'product_name'
     quantity: number;
-    price: number;
+    price?: number;
     no_of_damages?: number;
   }[];
 };
@@ -43,11 +44,10 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
-  const [viewType, setViewType] = useState<'OrderDetails' | 'RefundDetails'>('OrderDetails'); // Added viewType
+  const [viewType, setViewType] = useState<'OrderDetails' | 'RefundDetails'>('OrderDetails');
   const [selectedStatus, setSelectedStatus] = useState<string>('OD'); // Default status 'OD'
 
-
-  const handleNetworkError = (error) => {
+  const handleNetworkError = (error: any) => {
     if (error.message === 'Network Error') {
       Alert.alert(
         'Network Error',
@@ -59,17 +59,16 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
     }
   };
 
-  
   // Fetch deliveries function
   const fetchData = async () => {
     try {
       const storedId = await AsyncStorage.getItem('deliveryman_id');
       const storedToken = await AsyncStorage.getItem('deliveryman_token');
-  
+
       if (storedId && storedToken) {
         setID(parseInt(storedId, 10));
         setToken(storedToken);
-  
+
         const response = await axios.get(
           `${API_URL}/api/my-deliveries/on-deliveryman/${storedId}`,
           {
@@ -80,7 +79,8 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
             timeout: 5000,
           }
         );
-  
+        // console.log('Fetched Data:', response.data);
+
         if (response.status === 200 && response.data.length > 0) {
           const validDeliveries = response.data.filter(
             (item: Delivery) => item.delivery_id
@@ -91,7 +91,7 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
           console.log('No ongoing deliveries found for the given status.');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       if (error.response?.status === 404) {
         // Handle 404 (no deliveries found) gracefully
         setDeliveries([]);
@@ -102,7 +102,6 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
           'It seems there is a problem with your internet connection. Please check and try again.'
         );
       } else {
-        // Log unexpected errors in a less intrusive way
         console.warn('Unexpected error occurred while fetching deliveries:', error.message);
       }
     } finally {
@@ -110,17 +109,13 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
       setRefreshing(false);
     }
   };
-  
-  
-  
-  
 
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
       const storedId = await AsyncStorage.getItem('deliveryman_id');
       const storedToken = await AsyncStorage.getItem('deliveryman_token');
-  
+
       if (storedId && storedToken) {
         setID(parseInt(storedId, 10));
         setToken(storedToken);
@@ -130,12 +125,9 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
       }
       setLoading(false);
     };
-  
+
     initializeData();
   }, []);
-
-  
-  
 
   // Refresh function
   const handleRefresh = () => {
@@ -149,26 +141,53 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
     }, [])
   );
 
-  const openViewOrder = (delivery: Delivery) => {
-    if (delivery && delivery.delivery_id) {
-      setSelectedDelivery(delivery);  // Set the selected delivery
-  
-      // Check if the delivery has damages and set the view accordingly
-      if (delivery.has_damages) {
-        setViewType('RefundDetails');
-      } else {
-        setViewType('OrderDetails');
+  const openViewOrder = async (delivery: Delivery) => {
+    if (!delivery || !delivery.delivery_id) {
+      Alert.alert('Error', 'Invalid delivery data.');
+      return;
+    }
+
+    try {
+      if (!token) {
+        Alert.alert('Error', 'Missing token. Please re-login.');
+        return;
       }
-  
-      setModalVisible(true);  // Show the modal
-    } else {
-      Alert.alert('Error', 'Invalid delivery data.');  // Show an error if no valid delivery
+
+      // Fetch the exact product list for this delivery_id
+      const productResponse = await axios.get(`${API_URL}/api/deliveries/${delivery.delivery_id}/product-lists`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 5000,
+      });
+
+      if (productResponse.status === 200 && productResponse.data && Array.isArray(productResponse.data.products)) {
+        const updatedDelivery = {
+          ...delivery,
+          products: productResponse.data.products,
+        };
+
+        setSelectedDelivery(updatedDelivery);
+
+        if (updatedDelivery.has_damages) {
+          setViewType('RefundDetails');
+        } else {
+          setViewType('OrderDetails');
+        }
+
+        setModalVisible(true);
+      } else {
+        Alert.alert('Error', 'Failed to fetch product details for this delivery.');
+      }
+    } catch (error: any) {
+      console.error('Error fetching product details:', error);
+      Alert.alert('Error', 'Something went wrong while fetching product details. Please try again later.');
     }
   };
 
   const closeModal = () => {
-    setModalVisible(false);        // Hide the modal
-    setSelectedDelivery(null);     // Reset the selected delivery data
+    setModalVisible(false);
+    setSelectedDelivery(null);
   };
 
   return (
@@ -201,8 +220,8 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
                 <Text className="text-black font-bold text-2xl">#{item.purchase_order_id || 'N/A'}</Text>
               </View>
               <View className="mb-2 w-full flex flex-row  px-1">
-              <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Delivery No:</Text>
-              <Text className="text-black font-bold text-2xl">#{item.delivery_id || 'N/A'}</Text>
+                <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Delivery No:</Text>
+                <Text className="text-black font-bold text-2xl">#{item.delivery_id || 'N/A'}</Text>
               </View>
               <View className="mb-2 w-full px-1">
                 <Text className={`font-bold text-xl ${item.has_damages ? 'text-red-500' : ' text-blue-600 '}`}>Address:</Text>
@@ -249,7 +268,6 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
         visible={modalVisible}
         onRequestClose={closeModal} // Properly close modal on Android back button
       >
-        {/* Check if selectedDelivery exists before rendering the modal content */}
         {selectedDelivery ? (
           viewType === 'OrderDetails' ? (
             <OrderDetails delivery={selectedDelivery} onClose={closeModal} />
@@ -257,13 +275,11 @@ const OnGoingDeliveries: React.FC<OnGoingDeliveriesProps> = ({ navigation }) => 
             <RefundDetails delivery={selectedDelivery} onClose={closeModal} />
           )
         ) : (
-          // Fallback UI if selectedDelivery is not available
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <Text>No delivery data available</Text>
           </View>
         )}
       </Modal>
-
     </SafeAreaView>
   );
 };

@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, Image, TextInput, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '../url';
-import { useNavigation } from '@react-navigation/native';
 
 const Report = () => {
   const navigation = useNavigation();
@@ -20,10 +19,20 @@ const Report = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false); // Loading state
 
-  const handleDamageChange = (productId, newValue) => {
+  const handleDamageChange = (product, newValue) => {
+    const deliveredQuantity = product.quantity || 0;
+    let numericValue = parseInt(newValue.replace(/^0+/, ''), 10);
+    if (isNaN(numericValue)) numericValue = 0;
+
+    // If user entered a value greater than delivered quantity, show alert and revert.
+    if (numericValue > deliveredQuantity) {
+      Alert.alert('Error', `You cannot report more damages than the delivered quantity (${deliveredQuantity}).`);
+      numericValue = deliveredQuantity; // Cap the value
+    }
+
     setDamageCounts((prevState) => ({
       ...prevState,
-      [productId]: newValue.replace(/^0+/, '') || '0',
+      [product.product_id]: numericValue.toString(),
     }));
   };
 
@@ -65,11 +74,6 @@ const Report = () => {
   };
 
   const handleSubmit = async () => {
-    if (photos.length === 0) {
-      Alert.alert('Error', 'Please take at least one photo to proceed.');
-      return;
-    }
-
     setLoading(true); // Show loading indicator
 
     const formData = new FormData();
@@ -88,14 +92,17 @@ const Report = () => {
       return;
     }
 
-    photos.forEach((photo, index) => {
-      const fileName = photo.split('/').pop();
-      formData.append('images[]', {
-        uri: photo,
-        name: fileName || `photo_${index}.jpg`,
-        type: 'image/jpeg',
+    // Append images only if any photos exist
+    if (photos.length > 0) {
+      photos.forEach((photo, index) => {
+        const fileName = photo.split('/').pop();
+        formData.append('images[]', {
+          uri: photo,
+          name: fileName || `photo_${index}.jpg`,
+          type: 'image/jpeg',
+        });
       });
-    });
+    }
 
     try {
       const response = await axios.post(`${API_URL}/api/update-delivery/${delivery.delivery_id}`, formData, {
@@ -134,18 +141,26 @@ const Report = () => {
             </View>
 
             <Text className="text-lg font-bold mb-2">Damage Report:</Text>
-            {delivery.products.map((product, index) => (
-              <View key={index} className="mb-4">
-                <Text className="text-xl font-bold text-blue-500">{product.product_name}</Text>
-                <TextInput
-                  className="border border-gray-300 rounded text-xl px-2 py-2 mt-2"
-                  placeholder="Number of damages"
-                  keyboardType="numeric"
-                  value={damageCounts[product.product_id]?.toString() || '0'}
-                  onChangeText={(text) => handleDamageChange(product.product_id, text)}
-                />
-              </View>
-            ))}
+            {delivery.products.map((product, index) => {
+              const productName = product.product_name || product.name || 'Unnamed Product';
+              const deliveredQuantity = product.quantity || 0;
+              const currentDamageCount = damageCounts[product.product_id]?.toString() || '0';
+
+              return (
+                <View key={index} className="mb-4">
+                  <Text className="text-xl font-bold text-blue-500">{productName}</Text>
+                  <Text className="text-base mb-2 text-blue-700">Quantity Brought: {deliveredQuantity}</Text>
+                  <Text>Damage:</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded bg-red-100 text-red-500 text-xl px-2 py-2 mt-2"
+                    placeholder="Number of damages"
+                    keyboardType="numeric"
+                    value={currentDamageCount}
+                    onChangeText={(text) => handleDamageChange(product, text)}
+                  />
+                </View>
+              );
+            })}
 
             <View className="mb-5">
               <Text className="text-lg font-bold">Comments (Optional):</Text>
@@ -156,11 +171,13 @@ const Report = () => {
                 placeholder="Add any comments..."
                 value={comment}
                 onChangeText={setComment}
+                textAlignVertical="top"
+                textAlign="left"
               />
             </View>
 
             <View className="mb-5">
-              <Text className="text-lg font-bold">Photos (Required):</Text>
+              <Text className="text-lg font-bold">Photos (Optional):</Text>
               {photos.length > 0 ? (
                 <ScrollView horizontal className="mt-3">
                   {photos.map((photoUri, index) => (

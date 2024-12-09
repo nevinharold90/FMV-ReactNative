@@ -15,7 +15,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../url';
+import { API_URL } from '../url'; // Make sure this is correct
 import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,10 +45,13 @@ const Login: React.FC = () => {
         password,
       });
 
+      // Uncomment this line to see the full response for debugging:
+      console.log('Login Response:', response.data);
+
       if (response.status === 200 && response.data.success) {
         const user = response.data.user;
 
-        // Set user data in AsyncStorage
+        // Store user data in AsyncStorage
         await AsyncStorage.setItem('deliveryman_name', user.name);
         await AsyncStorage.setItem('deliveryman_id', user.id.toString());
         await AsyncStorage.setItem('deliveryman_token', response.data.token);
@@ -69,6 +72,10 @@ const Login: React.FC = () => {
         Alert.alert('Login Failed', 'Invalid credentials');
       }
     } catch (e: any) {
+      // Uncomment these lines to debug error details:
+      console.log('Login Error:', e);
+      console.log('Login Error Response:', e.response);
+
       if (e.response && e.response.status === 401) {
         Alert.alert('Error', 'Unauthorized: Incorrect username or password.');
       } else {
