@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { API_URL } from '../../config';
+import { API_URL } from '../url';
 import { useNavigation } from '@react-navigation/native';
 
 const Report = () => {

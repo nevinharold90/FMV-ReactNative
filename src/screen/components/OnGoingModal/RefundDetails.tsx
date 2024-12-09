@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
-import { API_URL } from './../../../../config'; // Update to match your configuration
+import { API_URL } from '../../../url'; // Update to match your configuration
 
 type Product = {
   id: number;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Alert, Image, RefreshControl, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { API_URL } from '../../../config';
+import { API_URL } from '../../url';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import hamburger from '../../assets/dashboard/modal/menu-svgrepo-com.png';
 import { NavigationProp } from '@react-navigation/native';
@@ -56,11 +56,11 @@ const PastDeliveries: React.FC<PastDeliveriesProps> = ({ navigation }) => {
         );
         setDeliveries(validDeliveries); // Set deliveries to state
       } else {
-        Alert.alert('Error', 'Failed to fetch deliveries.');
+        console.error('Error', 'Failed to fetch deliveries.');
       }
     } catch (error) {
-      console.error('Error fetching deliveries:', error);
-      Alert.alert('Error', 'Unable to fetch deliveries. Please try again.');
+      console.log('Error fetching deliveries:', error);
+      console.log('Error', 'Unable to fetch deliveries. Please try again.');
     } finally {
       setRefreshing(false); // Stop refreshing state
     }

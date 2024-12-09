@@ -5,7 +5,7 @@ import { Image, View, Text, TouchableOpacity, Dimensions, Alert } from 'react-na
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { API_URL } from '../../config';
+import { API_URL } from '../url';
 import axios from 'axios';
 
 import Report from './Report';
