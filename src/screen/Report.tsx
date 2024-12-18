@@ -64,6 +64,29 @@ const Report = () => {
     }
   };
 
+  const handlePickImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Gallery access denied');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets?.length) {
+        setPhotos((prevPhotos) => [...prevPhotos, result.assets[0].uri]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Unable to pick image. Please try again.');
+    }
+  };
+
   const handleImagePress = (uri) => {
     setSelectedImage(uri);
     setModalVisible(true);
@@ -73,12 +96,13 @@ const Report = () => {
     setPhotos((prevPhotos) => prevPhotos.filter((_, index) => index !== indexToRemove));
   };
 
+  // CURRENT PROGRESS
   const handleSubmit = async () => {
     setLoading(true); // Show loading indicator
-
+  
     const formData = new FormData();
     formData.append('notes', comment.trim() === '' ? 'no comment' : comment.trim());
-
+  
     if (delivery && delivery.products && Array.isArray(delivery.products)) {
       delivery.products.forEach((product, index) => {
         const noOfDamages = damageCounts[product.product_id] || '0';
@@ -91,19 +115,36 @@ const Report = () => {
       setLoading(false);
       return;
     }
-
-    // Append images only if any photos exist
+  
+    // Log the notes and damages added to formData
+    console.log("Form data for notes and damages:", comment, damageCounts);
+  
+    // Before appending the image to FormData, log it separately
     if (photos.length > 0) {
       photos.forEach((photo, index) => {
         const fileName = photo.split('/').pop();
-        formData.append('images[]', {
+        const file = {
           uri: photo,
           name: fileName || `photo_${index}.jpg`,
           type: 'image/jpeg',
-        });
+        };
+
+        console.log(`Image ${index}:`, file); // Log image info
+
+        // Append to FormData
+        formData.append('images[]', file);
       });
     }
 
+    // Manually log FormData parts to check the images added
+    formData.forEach((value, key) => {
+      if (key === 'images[]') {
+        console.log(`${key}:`, value); // log the image object properly
+      } else {
+        console.log(`${key}: ${value}`); // log other form data
+      }
+    });
+    
     try {
       const response = await axios.post(`${API_URL}/api/update-delivery/${delivery.delivery_id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -125,7 +166,21 @@ const Report = () => {
       Alert.alert('Error', 'An error occurred while submitting the report.');
       setLoading(false); // Hide loading indicator on error
     }
+  
+    // Just to simulate the post request was successful for now
+    Alert.alert('Success', 'Delivery report data ready for submission.', [
+      {
+        text: 'OK',
+        onPress: () => {
+          setLoading(false); // Hide loading indicator
+          console.log('Form Data Ready for Submission:', formData);
+        },
+      },
+    ]);
   };
+  
+  
+  
 
   return (
     <SafeAreaView className="flex-1 bg-white p-5">
@@ -205,10 +260,22 @@ const Report = () => {
               </View>
             ) : (
               <>
-                <TouchableOpacity onPress={handleTakePhoto} className="bg-green-500 p-3 rounded mb-5">
-                  <Text className="text-white text-lg text-center">Take Photo</Text>
+              <View className='flex flex-row p-1 w-full gap-2'>
+                <TouchableOpacity 
+                  onPress={handleTakePhoto} 
+                  className="bg-green-500 p-3 rounded mb-5 w-1/2"
+                >
+                <Text className="text-white text-md text-center">Take Photo</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity 
+                  onPress={handlePickImage} 
+                  className="bg-yellow-500 p-3 rounded mb-5 w-1/2"
+                >
+                  <Text className="text-white text-md text-center">Pick Photo from Gallery</Text>
+                </TouchableOpacity>
+              </View>
+                
                 <TouchableOpacity onPress={handleSubmit} className="bg-blue-500 p-3 rounded">
                   <Text className="text-white text-lg text-center">Submit Report</Text>
                 </TouchableOpacity>

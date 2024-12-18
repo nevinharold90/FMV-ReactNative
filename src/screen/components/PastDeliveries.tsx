@@ -63,11 +63,11 @@ const PastDeliveries: React.FC<PastDeliveriesProps> = ({ navigation }) => {
         setDeliveries(validDeliveries); // Set deliveries to state
       } else {
         console.error('Error: Invalid response format', response.data);
-        Alert.alert('Error', 'Failed to fetch deliveries. Invalid response format.');
+        console.error('Error', 'Failed to fetch deliveries. Invalid response format.');
       }
     } catch (error) {
       console.log('Error fetching deliveries:', error);
-      Alert.alert('Error', 'Unable to fetch deliveries. Please try again.');
+      console.error('Error', 'Unable to fetch deliveries. Please try again.');
     } finally {
       setRefreshing(false); // Stop refreshing state
     }
@@ -87,7 +87,9 @@ const PastDeliveries: React.FC<PastDeliveriesProps> = ({ navigation }) => {
         <TouchableOpacity className="p-2" onPress={() => navigation.openDrawer()}>
           <Image source={hamburger} className="w-10 h-10" />
         </TouchableOpacity>
-        <Text className="text-2xl font-bold ml-3">Past Deliveries</Text>
+        <Text className="text-2xl font-bold ml-3">
+          Past Deliveries
+        </Text>
       </View>
 
       {/* Deliveries List */}

@@ -46,7 +46,7 @@ const Login: React.FC = () => {
       });
 
       // Uncomment this line to see the full response for debugging:
-      console.log('Login Response:', response.data);
+      // console.log('Login Response:', response.data);
 
       if (response.status === 200 && response.data.success) {
         const user = response.data.user;
